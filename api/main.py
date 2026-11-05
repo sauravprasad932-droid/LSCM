@@ -1,7 +1,8 @@
 """FastAPI main application entrypoint for Route.it.
 
 Configures CORS for frontend dashboard development servers, registers
-REST and WebSocket routers, and initializes telemetry lifecycle hooks.
+REST and WebSocket routers (both at root and under /api for unified hosting),
+mounts the prebuilt React dashboard if present, and initializes telemetry hooks.
 """
 
 from __future__ import annotations
@@ -9,9 +10,11 @@ from __future__ import annotations
 import asyncio
 from contextlib import asynccontextmanager
 import logging
+from pathlib import Path
 from typing import AsyncGenerator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from api import __version__
 from api.routes.events import router as events_router
@@ -57,18 +60,29 @@ def create_app() -> FastAPI:
             "http://127.0.0.1:3000",
             "http://localhost:5173",
             "http://127.0.0.1:5173",
-            "*",  # Permissive for development convenience
+            "*",  # Permissive for development and cloud previews
         ],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
 
-    # Register API and WebSocket routers
+    # Register API and WebSocket routers at root (for direct API clients & tests)
     app.include_router(health_router)
     app.include_router(problems_router)
     app.include_router(events_router)
     app.include_router(ws_router)
+
+    # Also expose under /api/* so the React dashboard works without a separate reverse proxy
+    app.include_router(health_router, prefix="/api", include_in_schema=False)
+    app.include_router(problems_router, prefix="/api", include_in_schema=False)
+    app.include_router(events_router, prefix="/api", include_in_schema=False)
+    app.include_router(ws_router, prefix="/api", include_in_schema=False)
+
+    # Serve prebuilt React production bundle (dashboard/dist) when available
+    dist_dir = Path(__file__).resolve().parent.parent / "dashboard" / "dist"
+    if dist_dir.is_dir():
+        app.mount("/", StaticFiles(directory=str(dist_dir), html=True), name="dashboard")
 
     return app
 

@@ -11,8 +11,12 @@ export function useWebSocket(problemId: string | null, onMessage: WsHandler) {
   const connect = useCallback(() => {
     if (!problemId) return;
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    // When using Vite dev proxy, connect to backend directly on WS
-    const url = `${proto}://localhost:8000/ws/problems/${problemId}`;
+    // In Vite dev mode (:5173), connect to backend on :8000; in production/cloud, use same host
+    const host =
+      window.location.port === '5173'
+        ? `${window.location.hostname}:8000`
+        : window.location.host;
+    const url = `${proto}://${host}/ws/problems/${problemId}`;
     const ws = new WebSocket(url);
     wsRef.current = ws;
 

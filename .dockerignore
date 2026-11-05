@@ -1,0 +1,9 @@
+.git
+__pycache__
+*.pyc
+.pytest_cache
+.venv
+venv
+dashboard/node_modules
+routing/custom_files/*.pbf
+routing/valhalla_tiles

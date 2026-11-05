@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: route-it-sih2026
+    runtime: python
+    plan: free
+    buildCommand: pip install -e .
+    startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: VALHALLA_URL
+        value: http://localhost:8002
