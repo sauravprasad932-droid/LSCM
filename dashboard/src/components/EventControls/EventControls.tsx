@@ -6,6 +6,8 @@ interface EventControlsProps {
   hasSolution: boolean;
   onStartCongestion: () => void;
   onStartBlockage: () => void;
+  onReplayNext?: () => void;
+  replayStep?: number;
   onCancel: () => void;
 }
 
@@ -15,6 +17,8 @@ export function EventControls({
   hasSolution,
   onStartCongestion,
   onStartBlockage,
+  onReplayNext,
+  replayStep = 0,
   onCancel,
 }: EventControlsProps) {
   return (
@@ -41,6 +45,17 @@ export function EventControls({
           >
             {isInjecting ? <span className="spinner-sm" /> : '🚧'} Blockage
           </button>
+          {onReplayNext && (
+            <button
+              id="btn-replay-demo"
+              className="btn btn-event congestion"
+              disabled={!hasSolution || isInjecting}
+              onClick={onReplayNext}
+              title="Automatically step through canonical dynamic traffic incidents"
+            >
+              🎬 Replay ({(replayStep % 4) + 1}/4)
+            </button>
+          )}
         </>
       ) : (
         <button className="btn btn-cancel" onClick={onCancel}>

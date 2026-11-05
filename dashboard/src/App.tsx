@@ -9,14 +9,21 @@ import { TierBanner } from './components/EventControls/TierBanner';
 import { vadodaraScenario } from './data/vadodara_scenario';
 import type { SolutionResponse } from './api/types';
 
+const REPLAY_POINTS: Array<{ lat: number; lon: number; mode: 'congestion' | 'blockage' }> = [
+  { lat: 22.3105, lon: 73.1667, mode: 'congestion' },
+  { lat: 22.3242, lon: 73.1816, mode: 'congestion' },
+  { lat: 22.2990, lon: 73.2030, mode: 'blockage' },
+  { lat: 22.2721, lon: 73.1823, mode: 'blockage' },
+];
+
 export default function App() {
   const [solverState, solverActions] = useSolver();
   const [eventState, eventActions] = useEvents();
   const [toggleMode, setToggleMode] = useState<'current' | 'previous'>('current');
   const [previousSolution, setPreviousSolution] = useState<SolutionResponse | null>(null);
+  const [replayStep, setReplayStep] = useState(0);
 
   const handleNewSolution = useCallback((sol: SolutionResponse) => {
-    // Directly update solver state with the newly re-optimized solution
     solverActions.setSolution(sol);
   }, [solverActions]);
 
@@ -43,6 +50,23 @@ export default function App() {
     handleNewSolution,
   ]);
 
+  const handleReplayNext = useCallback(() => {
+    if (!solverState.problemId) return;
+    if (solverState.solution) {
+      setPreviousSolution(solverState.solution);
+    }
+    const pt = REPLAY_POINTS[replayStep % REPLAY_POINTS.length];
+    setReplayStep((s) => (s + 1) % REPLAY_POINTS.length);
+    eventActions.startPlacement(pt.mode);
+    eventActions.injectAtPoint(
+      solverState.problemId,
+      pt.lat,
+      pt.lon,
+      vadodaraScenario.customers,
+      handleNewSolution,
+    );
+  }, [solverState.problemId, solverState.solution, replayStep, eventActions, handleNewSolution]);
+
   const showToggle = !!previousSolution && !!solverState.solution;
 
   return (
@@ -65,6 +89,8 @@ export default function App() {
             hasSolution={!!solverState.solution}
             onStartCongestion={() => eventActions.startPlacement('congestion')}
             onStartBlockage={() => eventActions.startPlacement('blockage')}
+            onReplayNext={handleReplayNext}
+            replayStep={replayStep}
             onCancel={eventActions.cancelPlacement}
           />
         </div>
