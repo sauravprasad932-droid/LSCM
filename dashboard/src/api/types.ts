@@ -78,6 +78,7 @@ export interface SolveJob {
   progress_iteration: number;
   max_iters: number;
   current_cost: number;
+  convergence_history?: Array<{ iter: number; cost: number }>;
   error_message?: string;
   created_at: number;
   completed_at?: number;

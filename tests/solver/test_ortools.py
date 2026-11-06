@@ -5,8 +5,10 @@ import pytest
 
 from solver.io import load_cvrplib, load_solution_json
 from solver.models import Customer, Depot, Problem, Vehicle
-from solver.ortools_baseline import ORToolsConfig, solve_ortools
+from solver.ortools_baseline import HAS_ORTOOLS, ORToolsConfig, solve_ortools
 from solver.run import main
+
+pytestmark = pytest.mark.skipif(not HAS_ORTOOLS, reason="ortools not installed")
 
 
 def test_ortools_hand_crafted() -> None:

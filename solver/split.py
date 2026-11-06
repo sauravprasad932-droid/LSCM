@@ -22,6 +22,8 @@ except ImportError:
 
     def njit(*args: Any, **kwargs: Any) -> Any:  # type: ignore
         """Fallback no-op decorator when numba is not installed."""
+        if len(args) == 1 and len(kwargs) == 0 and callable(args[0]):
+            return args[0]
         def decorator(func: Any) -> Any:
             return func
         return decorator

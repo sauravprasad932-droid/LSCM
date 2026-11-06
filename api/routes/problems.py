@@ -104,6 +104,7 @@ def _run_solve_worker(
         def on_step(iter_num: int, best_cost: float) -> None:
             job.progress_iteration = iter_num
             job.current_cost = round(best_cost, 2)
+            job.convergence_history.append({"iter": iter_num, "cost": round(best_cost, 2)})
             store.save_job(job)
 
             manager.broadcast_sync(
@@ -262,9 +263,17 @@ def delete_problem(problem_id: str, store: ProblemStore = Depends(get_store)) ->
 def solve_problem(
     problem_id: str,
     req: SolveRequest = SolveRequest(),
+    async_mode: bool = Query(
+        False,
+        description="Whether to run in background thread pool. Set True for async background worker; default False executes synchronously for serverless reliability.",
+    ),
     store: ProblemStore = Depends(get_store),
 ) -> SolveJob:
-    """Launch classical QPSO optimization asynchronously and stream progress to WebSockets."""
+    """Launch classical QPSO optimization and stream progress to WebSockets.
+
+    In serverless platforms (e.g. Vercel), executing synchronously within the HTTP request
+    guarantees the job completes without container suspension, returning full convergence history.
+    """
     problem = store.get_problem(problem_id)
     if problem is None:
         raise HTTPException(
@@ -281,8 +290,12 @@ def solve_problem(
     )
     store.save_job(job)
 
-    # Launch non-blocking worker in solver thread pool
-    _solver_executor.submit(_run_solve_worker, problem, job, req, store)
+    if async_mode:
+        # Launch non-blocking worker in solver thread pool
+        _solver_executor.submit(_run_solve_worker, problem, job, req, store)
+    else:
+        # Execute synchronously to guarantee completion in serverless environments
+        _run_solve_worker(problem, job, req, store)
 
     return job
 

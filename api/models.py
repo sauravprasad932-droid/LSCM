@@ -69,6 +69,7 @@ class SolveJob(BaseModel):
     progress_iteration: int = 0
     max_iters: int = 0
     current_cost: float = 0.0
+    convergence_history: list[dict[str, Any]] = Field(default_factory=list)
     error_message: str | None = None
     created_at: float = Field(default_factory=time.time)
     completed_at: float | None = None

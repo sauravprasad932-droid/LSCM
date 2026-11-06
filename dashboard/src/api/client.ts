@@ -9,7 +9,7 @@ import type {
   SolveRequest,
 } from './types';
 
-const BASE = '/api';
+const BASE = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || '/api').replace(/\/+$/, '');
 
 /** Format FastAPI/Pydantic error responses into readable strings.
  *  Handles 422 detail arrays: e.g. "body.customers.0.priority: Input should be >= 1"

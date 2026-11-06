@@ -99,6 +99,26 @@ export function useSolver(): [SolverState, SolverActions] {
 
       try {
         const job = await api.solveProblem(problemId, req);
+
+        // Immediate completion (synchronous / serverless execution)
+        if (job.status === 'completed') {
+          const conv = (job.convergence_history ?? []).map((pt) => ({
+            iter: pt.iter,
+            cost: pt.cost,
+          }));
+          const sol = await api.getSolution(problemId);
+          setState((s) => ({
+            ...s,
+            job,
+            solution: sol,
+            convergence: conv.length > 0 ? conv : s.convergence,
+            oracleType: req.cost_oracle_type,
+            isLoading: false,
+            error: null,
+          }));
+          return;
+        }
+
         setState((s) => ({
           ...s,
           job,
@@ -200,6 +220,59 @@ export function useSolver(): [SolverState, SolverActions] {
   }, [state.problemId]); // eslint-disable-line
 
   useWebSocket(state.problemId, handleWsMessage);
+
+  // Polling fallback when running in serverless or when WebSockets are unavailable
+  useEffect(() => {
+    if (!state.isLoading || !state.job || !state.problemId) return;
+    if (state.job.status === 'completed' || state.job.status === 'failed') return;
+
+    const pid = state.problemId;
+    const jid = state.job.job_id;
+    let active = true;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const currentJob = await api.getJob(pid, jid);
+        if (!active) return;
+
+        if (currentJob.convergence_history && currentJob.convergence_history.length > 0) {
+          setState((s) => ({
+            ...s,
+            convergence: currentJob.convergence_history!.map((pt) => ({
+              iter: pt.iter,
+              cost: pt.cost,
+            })),
+            job: currentJob,
+          }));
+        } else if (currentJob.progress_iteration > 0) {
+          setState((s) => ({
+            ...s,
+            job: currentJob,
+          }));
+        }
+
+        if (currentJob.status === 'completed') {
+          clearInterval(pollInterval);
+          const sol = await api.getSolution(pid);
+          if (active) {
+            setState((s) => ({ ...s, solution: sol, job: currentJob, isLoading: false }));
+          }
+        } else if (currentJob.status === 'failed') {
+          clearInterval(pollInterval);
+          if (active) {
+            setState((s) => ({ ...s, error: currentJob.error_message || 'Optimization failed', isLoading: false }));
+          }
+        }
+      } catch {
+        // Continue polling until timeout or completion
+      }
+    }, 600);
+
+    return () => {
+      active = false;
+      clearInterval(pollInterval);
+    };
+  }, [state.isLoading, state.job?.job_id, state.job?.status, state.problemId]);
 
   return [
     state,

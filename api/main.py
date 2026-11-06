@@ -79,10 +79,29 @@ def create_app() -> FastAPI:
     app.include_router(events_router, prefix="/api", include_in_schema=False)
     app.include_router(ws_router, prefix="/api", include_in_schema=False)
 
-    # Serve prebuilt React production bundle (dashboard/dist) when available
-    dist_dir = Path(__file__).resolve().parent.parent / "dashboard" / "dist"
-    if dist_dir.is_dir():
-        app.mount("/", StaticFiles(directory=str(dist_dir), html=True), name="dashboard")
+    # Root service descriptors
+    @app.get("/", summary="Route.it Service Information")
+    @app.get("/api", summary="Route.it API Root")
+    def root_info() -> dict[str, str]:
+        return {
+            "name": "Route.it Fleet Routing API",
+            "version": __version__,
+            "status": "online",
+            "docs_url": "/docs",
+            "health_url": "/api/health",
+        }
+
+    @app.get("/api/docs", include_in_schema=False)
+    def redirect_docs():
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url="/docs")
+
+    # Serve prebuilt React production bundle (dashboard/dist) when running standalone locally
+    import os
+    if not os.environ.get("VERCEL"):
+        dist_dir = Path(__file__).resolve().parent.parent / "dashboard" / "dist"
+        if dist_dir.is_dir():
+            app.mount("/app", StaticFiles(directory=str(dist_dir), html=True), name="dashboard")
 
     return app
 

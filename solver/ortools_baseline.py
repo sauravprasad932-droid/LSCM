@@ -9,7 +9,13 @@ from __future__ import annotations
 import time
 from typing import Sequence
 import numpy as np
-from ortools.constraint_solver import pywrapcp, routing_enums_pb2
+try:
+    from ortools.constraint_solver import pywrapcp, routing_enums_pb2
+    HAS_ORTOOLS = True
+except ImportError:
+    pywrapcp = None
+    routing_enums_pb2 = None
+    HAS_ORTOOLS = False
 from pydantic import BaseModel, Field
 
 from solver.models import Problem, Route, Solution
@@ -47,6 +53,8 @@ def solve_ortools(
     Returns:
         Solution model containing routes, costs, and feasibility metrics.
     """
+    if not HAS_ORTOOLS:
+        raise ImportError("Google OR-Tools is not installed. Install with 'pip install ortools'.")
     if config is None:
         config = ORToolsConfig()
 

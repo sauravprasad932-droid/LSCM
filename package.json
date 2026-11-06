@@ -1,0 +1,11 @@
+{
+  "name": "route-it",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ROUTE.IT - Adaptive Quantum-Inspired Fleet Routing Engine for SIH 2026",
+  "scripts": {
+    "build": "cd dashboard && npm install && npm run build",
+    "dashboard:dev": "cd dashboard && npm run dev",
+    "dashboard:build": "cd dashboard && npm run build"
+  }
+}
